@@ -1,0 +1,95 @@
+---
+title: "Prediction Assignment Writeup"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSE, error=TRUE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE, warning = FALSE)
+```
+
+
+```{r Packages, results='hide',message=FALSE}
+library(caret);library(rpart);library(randomForest)
+```
+
+Setting seed for reproducibility
+
+```{r}
+set.seed(45)
+```
+
+Loading the data
+```{r Preprocessing}
+training <- read.csv("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",na.strings=c("NA","#DIV/0!",""))
+testing <- read.csv("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",na.strings=c("NA","#DIV/0!",""))
+```
+
+We are going to eliminate the columns that contains NA values
+```{r}
+training<-training[,colSums(is.na(training)) == 0]
+testing <-testing[,colSums(is.na(testing)) == 0]
+```
+Also, the first 5 columns are irrelevant to be considered as predictors so we remove them
+```{r}
+training   <-training[,-c(1:5)]
+testing <-testing[,-c(1:5)]
+
+#Final Dimensions of the data
+dim(training)
+dim(testing)
+```
+
+```{r}
+#COnverting Classe to factor
+training$classe <-factor(training$classe)
+```
+
+
+Cross-validation
+```{r cross}
+#In order to get out-of-sample errors, split the training data in training (75%) and testing (25%) data) subsets:
+inTrain <- createDataPartition(y=training$classe, p=0.75, list=FALSE)    
+datatrain <- training[inTrain, ]
+datatest <- training[-inTrain, ]  
+dim(datatrain)
+dim(datatest)
+```
+
+
+Machine Learning Algorithms
+
+Here we are going to use 2 machine learning algo
+
+1)Decision Trees
+2)Random Forest
+
+
+
+```{r model}
+#DECISION TREE
+#Fit model on datatrain data
+fitDT <- rpart(classe ~ ., data= datatrain, method="class")
+
+#Use model to predict class in validation set (datatest)
+predictionDT <- predict(fitDT, datatest, type = "class")
+
+#Estimate the errors of the prediction algorithm in the Decision Tree model
+confusionMatrix(datatest$classe, predictionDT)
+
+#RANDOM FOREST
+#Fit model on datatrain data
+fitRF <- randomForest(classe ~ ., data=datatrain, method="class")
+
+#Use model to predict class in validation set (datatest)
+predictionRF <- predict(fitRF, datatest, type = "class")
+
+#Estimate the errors of the prediction algorithm in the Random Forest
+confusionMatrix(datatest$classe, predictionRF)
+```
+
+TEST THE MODEL TO PREDICT 20 DIFFERENT TEST CASES
+```{r quiz}
+# Perform prediction
+predictSubmission <- predict(fitRF, testing, type="class")
+predictSubmission
+```
